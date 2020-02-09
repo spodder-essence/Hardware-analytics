@@ -1,6 +1,8 @@
 """
 Author: Yvette & Max
-Please feel free to contact me for questions about this module (drew.lustig@)
+Please feel free to contact me for questions about this module
+
+#BQ comments added in 02/07/20 by Showmik; lines 751+
 """
 
 import os
@@ -23,7 +25,7 @@ class ADHQueryError(Exception):
 
 
 class Campaign(object):
-    """Class used to represent a DCM Campaign
+    """Class used to represent a DCM Campaign from config file parameters
 
     Parameters
     ----------
@@ -778,6 +780,7 @@ class Query(ADH):
             f'and "{end.strftime(time_string)}"')
             for start, end in event_times)
 
+#collects all user_id's and floodlight activity from bq activities table of specified campaign.
         act_stmt_list = []
         for id in self.floodlight_config_ids:
             table = f"`essence-dt-raw.{self.dcm_account_id}.activity_{self.campaign.advertiserId}`"
@@ -793,6 +796,12 @@ class Query(ADH):
             act_stmt_list.append(act_stmt)
         activities_stmts = "\nunion all\n".join(act_stmt_list)
 
+# generates a large impressions table for the campaign and groups the impressions by user_id, impression time, and orders by the time for the date and times specified.
+# generates a table of impression clicks for the campaign that contains user_id and time of click in an ordered table by time and user_id and evaluation dimension for the dates specified.
+# ****NOTE line 831? should it be "{self.eval_dimension}" instead of "placement_id" in the query???**** 02/07/2020,sp
+# unions clicks and impressions tables together checks the number of impressions the user has in new imps table
+# compares this table against those who actually converted in the activities table query above and has a floodlight id matching campaign.
+# exposed_nulls line 858
         window_stmts = f"""
             with imp as (SELECT
                 cast({self.eval_dimension} as string) as {self.eval_dimension},
@@ -821,7 +830,7 @@ class Query(ADH):
             group by 1,2,3),            
             imps as (select 
                  user_id, 
-                 placement_id, 
+                 cast({self.eval_dimension} as string) as {self.eval_dimension},
                  event_time, 
                  ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY event_time ASC) AS rownum 
                  from (select 
