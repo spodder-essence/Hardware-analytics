@@ -1,0 +1,37 @@
+{
+    "auth": {
+        "developer_key": "AIzaSyAnc0kt2Gsi7IgceRqOX5w6cGi_XGKL_uw",
+        "service_key_path": "",
+        "client_secret_path": "C:/Users/showmik.podder/Documents/GitHub/Hardware-analytics/Hardware_MTA_Project/scripts_update/essence_analytics_dev_notebooks.json"
+    },
+    "campaign": {
+        "id": 22783112,
+        "ids":[22526393],
+        "country_code": ["US"],
+        "advertiser_id": 9285518,
+        "start_date": "2019-10-01",
+        "end_date": "2019-12-31",
+        "activity_ids": [8543760],
+        "events": [
+            {
+                "start_timestamp": "2019-10-01 00:00:01",
+                "end_timestamp": "2019-12-31 23:59:59"
+            }
+        ]
+    },
+    "source": {
+        "use": "ADH",
+        "eval_dimension": "Site_Tactic",
+        "time_zone": "US/Eastern",
+        "query_format": "node",
+        "ADH": {
+            "customer_id": 48,
+            "data_customer_id": 13,
+            "overwrite": true
+        },
+        "BQ": {
+            "dcm_account_id": 5295,
+            "floodlight_config_ids": [2542116]
+        }
+    }
+}
