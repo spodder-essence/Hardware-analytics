@@ -2,7 +2,7 @@
     "auth": {
         "developer_key": "AIzaSyAnc0kt2Gsi7IgceRqOX5w6cGi_XGKL_uw",
         "service_key_path": "",
-        "client_secret_path": "C:/Users/showmik.podder/Documents/GitHub/Hardware-analytics/Hardware_MTA_Project/scripts_update/essence_analytics_dev_notebooks.json"
+        "client_secret_path": "../Hardware-analytics/Hardware_MTA_Project/scripts_update/essence_analytics_dev_notebooks.json"
     },
     "campaign": {
         "id": 22783112,
