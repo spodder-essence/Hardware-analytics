@@ -2,7 +2,7 @@
 Author: Yvette & Max
 Please feel free to contact me for questions about this module
 
-#BQ comments added in 02/07/20 by Showmik; lines 751+
+#BQ comments added in 02/07/20; lines 751+, stick to ADH
 """
 
 import os
