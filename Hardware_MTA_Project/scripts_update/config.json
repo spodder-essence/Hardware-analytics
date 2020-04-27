@@ -2,20 +2,20 @@
     "auth": {
         "developer_key": "AIzaSyAnc0kt2Gsi7IgceRqOX5w6cGi_XGKL_uw",
         "service_key_path": "",
-        "client_secret_path": "C:/Users/showmik.podder/Documents/GitHub/Hardware-analytics/Hardware_MTA_Project/scripts_update/essence_analytics_dev_notebooks.json"
+        "client_secret_path": "C:/Users/maximilian.schmitt/Documents/Analytics Hardware/MTA/V2/ClientSecretDevKey/essence_analytics_dev_notebooks.json"
     },
     "campaign": {
-        "id": 22783112,
-        "ids":[22526393],
+        "id": [23558368,23540338],
+        "ids":[10413728,8582844],
         "country_code": ["US"],
-        "advertiser_id": 9285518,
-        "start_date": "2019-10-01",
-        "end_date": "2019-12-31",
-        "activity_ids": [8543760],
+        "advertiser_id": [6071606,4736204],
+        "start_date": "2020-02-03",
+        "end_date": "2020-04-08",
+        "activity_ids": [6708844,6701393,6701390,8839839,8058190,8059675,8059678,8014626,8059672,8014623,8059669,8022428,8022425],
         "events": [
             {
-                "start_timestamp": "2019-10-01 00:00:01",
-                "end_timestamp": "2019-12-31 23:59:59"
+                "start_timestamp": "2020-02-03 00:00:01",
+                "end_timestamp": "2020-04-08 23:59:59"
             }
         ]
     },

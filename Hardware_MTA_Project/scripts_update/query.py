@@ -1,8 +1,6 @@
 """
-Author: Yvette & Max
-Please feel free to contact me for questions about this module
-
-#BQ comments added in 02/07/20 by Showmik; lines 751+
+Author: Drew Lustig, Yvette Wang, Maximilian Schmitt
+Please feel free to contact me for questions about this module (maximilian.schmitt@)
 """
 
 import os
@@ -25,11 +23,11 @@ class ADHQueryError(Exception):
 
 
 class Campaign(object):
-    """Class used to represent a DCM Campaign from config file parameters
+    """Class used to represent a DCM Campaign
 
     Parameters
     ----------
-    id : int
+    id : List[int]
         DCM Campaign ID
     ids : List[int]
         List of DCM Campaign Search ID(s)
@@ -45,7 +43,7 @@ class Campaign(object):
         List of event start and end times
         ex. [{"start_timestamp": "yyyy-mm-dd hh:mm:ss",
             "end_timestamp": "yyyy-mm-dd hh:mm:ss"}]
-    advertiserId : int
+    advertiserId : List[int]
         DCM advertiser ID of campaign
     """
 
@@ -403,6 +401,7 @@ class Query(ADH):
         self._format = format
         self.dcm_account_id = dcm_account_id
         self.floodlight_config_ids = floodlight_config_ids
+        self.uniqueID="GoogleNA_Hardware_MTA_"+str(int(time.time()))+"_"
         ADH.__init__(
             self,
             customer_id=customer_id,
@@ -410,7 +409,7 @@ class Query(ADH):
             data_customer_id=data_customer_id,
             start_date=campaign.startDate,
             end_date=campaign.endDate,
-            query_name=adh_query_name,
+            query_name=adh_query_name, 
             operation_name=adh_operation_name)
 
     @property
@@ -426,7 +425,7 @@ class Query(ADH):
     @property
     def title(self):
         eval_dim = self.eval_dimension.replace("_", "")
-        return f'MarkovChainAttr_{self.campaign.id}_{eval_dim}_{self.format}'
+        return f'MarkovChainAttr_{eval_dim}_{self.format}'
 
     @property
     def dest_table(self):
@@ -442,7 +441,7 @@ class Query(ADH):
         try:
             timezone_offset = timedelta(hours=timezone[self.time_zone])
         except KeyError:
-            raise NotImplementedError(f'Time zone {self.time_zone} is not yet supported for BigQuery. Please contact drew.lustig@essenceglobal.com to have it added.')
+            raise NotImplementedError(f'Time zone {self.time_zone} is not yet supported for BigQuery. Please contact maximilian.schmitt@essenceglobal.com to have it added.')
         return timezone_offset
 
 
@@ -455,6 +454,7 @@ class Query(ADH):
         event_stmts = "(" + " or ".join(event_list) + ")"
 
         window_stmts = f"""
+	Create Table {self.uniqueID+"imps"} AS(
             with clicks as (SELECT
             {self.eval_dimension}, 
             user_id, 
@@ -463,10 +463,14 @@ class Query(ADH):
             from `adh.cm_dt_clicks` left join 
             (SELECT paid_search_legacy_keyword_id,
         
-            CASE WHEN UPPER(paid_search_campaign) LIKE '%AW SEM%' AND UPPER(paid_search_campaign) LIKE '%BKWS%' THEN "Google_BKWS"
-            WHEN UPPER(paid_search_campaign) LIKE '%BING SEM%' AND UPPER(paid_search_campaign) LIKE '%BKWS%' THEN "Bing_BKWS"
-            WHEN UPPER(paid_search_campaign) LIKE '%AW SEM%' AND UPPER(paid_search_campaign) LIKE '%SKWS%'THEN "Google_SKWS"
-            WHEN UPPER(paid_search_campaign) LIKE '%BING SEM%' AND UPPER(paid_search_campaign) LIKE '%SKWS%' THEN "Bing_SKWS"
+            CASE WHEN UPPER(paid_search_campaign) LIKE '%AW SEM%' AND UPPER(paid_search_campaign) LIKE '%BKWS%' AND campaign_id = 10413728 THEN "Nest_Google_BKWS"
+            WHEN UPPER(paid_search_campaign) LIKE '%BING SEM%' AND UPPER(paid_search_campaign) LIKE '%BKWS%' AND campaign_id = 10413728 THEN "Nest_Bing_BKWS"
+            WHEN UPPER(paid_search_campaign) LIKE '%AW SEM%' AND UPPER(paid_search_campaign) LIKE '%SKWS%' AND campaign_id = 10413728 THEN "Nest_Google_SKWS"
+            WHEN UPPER(paid_search_campaign) LIKE '%BING SEM%' AND UPPER(paid_search_campaign) LIKE '%SKWS%' AND campaign_id = 10413728 THEN "Nest_Bing_SKWS"
+            WHEN UPPER(paid_search_campaign) LIKE '%AW SEM%' AND UPPER(paid_search_campaign) LIKE '%BKWS%' AND campaign_id = 8582844 THEN "Store_Google_BKWS"
+            WHEN UPPER(paid_search_campaign) LIKE '%BING SEM%' AND UPPER(paid_search_campaign) LIKE '%BKWS%' AND campaign_id = 8582844 THEN "Store_Bing_BKWS"
+            WHEN UPPER(paid_search_campaign) LIKE '%AW SEM%' AND UPPER(paid_search_campaign) LIKE '%SKWS%' AND campaign_id = 8582844 THEN "Store_Google_SKWS"
+            WHEN UPPER(paid_search_campaign) LIKE '%BING SEM%' AND UPPER(paid_search_campaign) LIKE '%SKWS%' AND campaign_id = 8582844 THEN "Store_Bing_SKWS"
             ELSE "OTHER" END AS Site_Tactic,
         
             CASE WHEN UPPER(paid_search_campaign) LIKE '%AW SEM%' AND UPPER(paid_search_match_type) LIKE '%EXACT%' THEN "Google_EXACT"
@@ -484,7 +488,8 @@ class Query(ADH):
             FROM `adh.cm_dt_paid_search` group by 1,2,3,4) a 
             on a.paid_search_legacy_keyword_id = event.segment_value_1                      
             WHERE
-                event.campaign_id in UNNEST(@search_campaign_id)
+                event.advertiser_id in UNNEST(@advertiser_Id)
+                and event.campaign_id in UNNEST(@search_campaign_id)
                 and user_id != '0'
                 AND event.country_code in UNNEST(@country_code)
                 And a.{self.eval_dimension} IS NOT NULL
@@ -494,13 +499,15 @@ class Query(ADH):
             imp as (select 
                 user_id, 
                 temp.{self.eval_dimension}, 
-                event.event_time as event_time, 
+                event.event_time as event_time,
                 ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY event.event_time ASC) AS rownum 
                 FROM `adh.cm_dt_impressions` LEFT JOIN
                 (SELECT placement.placement_id AS p_id, placement, site.site, 
         
-                CASE WHEN placement.placement LIKE '%NonRMKT%' THEN CONCAT(site.site, "_NonRMKT")
-                WHEN placement.placement LIKE '%RMKT%' THEN CONCAT(site.site, "_RMKT")
+                CASE WHEN placement.placement LIKE '%NonRMKT%' AND campaign_id = 23558368 THEN CONCAT("Nest_", site.site, "_NonRMKT")
+		WHEN placement.placement LIKE '%RMKT%' AND campaign_id = 23558368 THEN CONCAT("Nest_", site.site, "_RMKT")
+		WHEN placement.placement LIKE '%NonRMKT%' AND campaign_id = 23540338 THEN CONCAT("Store_", site.site, "_NonRMKT")
+                WHEN placement.placement LIKE '%RMKT%' AND campaign_id = 23540338 THEN CONCAT("Store_", site.site, "_RMKT")
                 WHEN UPPER(placement.placement) LIKE '%TEST%' THEN CONCAT(site.site, "_Test")
                 ELSE "OTHER" END AS Site_Tactic,
         
@@ -522,10 +529,11 @@ class Query(ADH):
                 ON event.placement_id = temp.p_id
                     
                 WHERE 
-                    event.campaign_id = {self.campaign.id}
+                    event.advertiser_id in UNNEST(@advertiser_Id)
+                    AND event.campaign_id in UNNEST(@campaign_id)
                     AND user_id != '0'
                     AND event.country_code in UNNEST(@country_code)
-                    AND temp.{self.eval_dimension} IS NOT NULL
+                    AND {self.eval_dimension} IS NOT NULL
                 group by 1, 2, 3),
             imps as (select
                  user_id,
@@ -543,39 +551,66 @@ class Query(ADH):
                        clicks.{self.eval_dimension} as {self.eval_dimension},
                        clicks.event_time as event_time,
                        clicks.rownum as rownum from clicks) as temp
-            group by 1, 2, 3),
-            activities as (
+            group by 1, 2, 3)
+	    select * from imps);
+
+            CREATE TABLE {self.uniqueID+"activities"} as (
             select
                 user_id,
                 min(event.event_time) as min_time,
+		max(event.event_time) as max_time,
                 event.event_sub_type as event_sub_type
             from `adh.cm_dt_activities`
             where
                 {event_stmts}
                 and user_id != '0'
                 and event.activity_id in UNNEST(@activity_ids)
-            group by 1,3),
-            exposed_nulls AS (
-            select
+            group by 1,4);
+
+
+            CREATE TABLE {self.uniqueID+"exposed_nulls"} AS (
+            (select
                 user_id, min(max_row) as max_row, max(converter) as converter
             from (
                 select user_id, max(rownum) as max_row, 0 as converter
-                from imps i group by 1, 3
+                from {"tmp."+self.uniqueID+"imps"} i group by 1, 3
                 union all
                 select i.user_id, max(rownum) as max_row, 1 as converter
-                from imps i join activities a
+                from {"tmp."+self.uniqueID+"imps"} i join {"tmp."+self.uniqueID+"activities"} a
                 on i.user_id = a.user_id
                     and i.event_time < a.min_time
                 where a.event_sub_type = 'POSTCLICK'
                 group by 1, 3
                 union all
-                select i.user_id, max(rownum) as max_row, 0.4 as converter
-                from imps i join activities a
+                select i.user_id, max(rownum) as max_row, 1 as converter
+                from {"tmp."+self.uniqueID+"imps"} i join {"tmp."+self.uniqueID+"activities"} a
                 on i.user_id = a.user_id
                     and i.event_time < a.min_time
                 where a.event_sub_type = 'POSTVIEW'
                 group by 1, 3)
-            group by 1)"""
+            group by 1));
+
+CREATE TABLE {self.uniqueID+"exposed_nulls2"} as (
+            (select
+                user_id, max_row, min_row, max(converter) as converter
+            from (
+                select i.user_id, max(rownum) as max_row, min(rownum) as min_row, 1 as converter
+                from {"tmp."+self.uniqueID+"imps"} i join {"tmp."+self.uniqueID+"activities"} a
+                on i.user_id = a.user_id
+                    and i.event_time > a.min_time
+                    and i.event_time < a.max_time
+                where a.event_sub_type = 'POSTCLICK'
+                group by 1, 4
+                union all
+                select i.user_id, max(rownum) as max_row, min(rownum) as min_row, 1 as converter
+                from {"tmp."+self.uniqueID+"imps"} i join {"tmp."+self.uniqueID+"activities"} a
+                on i.user_id = a.user_id
+                    and i.event_time > a.min_time
+                    and i.event_time < a.max_time
+                where a.event_sub_type = 'POSTVIEW'
+                group by 1, 4)
+            group by 1,2,3));"""
+
 
         if self.format == 'node':
             end_stmt = f"""
@@ -584,14 +619,42 @@ class Query(ADH):
                 b.{self.eval_dimension} as end_node,
                 count(distinct a.user_id) as uniques,
                 count(*) as count
-            from imps a
-            left join imps b
+            from {"tmp."+self.uniqueID+"imps"} a
+            left join {"tmp."+self.uniqueID+"imps"} b
             on a.user_id = b.user_id
                 and b.rownum - a.rownum = 1
-            join exposed_nulls n
+            join {"tmp."+self.uniqueID+"exposed_nulls"} n
             on a.user_id = n.user_id
-                and b.rownum < n.max_row
+                and b.rownum <= n.max_row
             group by 1,2
+
+            union all
+            select
+                a.{self.eval_dimension} as start_node,
+                b.{self.eval_dimension} as end_node,
+                count(distinct a.user_id) as uniques,
+                count(*) as count
+            from {"tmp."+self.uniqueID+"imps"} a
+            left join {"tmp."+self.uniqueID+"imps"} b
+            on a.user_id = b.user_id
+                and b.rownum - a.rownum = 1
+            join {"tmp."+self.uniqueID+"exposed_nulls2"} n2
+            on a.user_id = n2.user_id
+                and b.rownum <= n2.max_row
+                and b.rownum > n2.min_row
+            group by 1,2
+
+	    union all
+            select
+                'start' as start_node,
+                {self.eval_dimension} as end_node,
+                count(distinct user_id) as uniques,
+                count(*) as count
+            from {"tmp."+self.uniqueID+"imps"}
+            where rownum = 1
+            group by 1, 2
+            
+            
             union all
             select
                 {self.eval_dimension} as start_node,
@@ -599,19 +662,24 @@ class Query(ADH):
                 else 'null' end as end_node,
                 count(distinct i.user_id) as uniques,
                 sum(converter) as count
-            from imps i
-            join exposed_nulls n
-            on i.user_id = n.user_id
-                and i.rownum = n.max_row
+            from {"tmp."+self.uniqueID+"imps"} i
+            join {"tmp."+self.uniqueID+"exposed_nulls2"} n2
+            on i.user_id = n2.user_id
+               and i.rownum = n2.max_row
             group by 1, 2
+            
+            
             union all
             select
-                'start' as start_node,
-                {self.eval_dimension} as end_node,
-                count(distinct user_id) as uniques,
-                count(*) as count
-            from imps
-            where rownum = 1
+                {self.eval_dimension} as start_node,
+                case when converter = 1 then 'conv' when converter = 0.4 then 'conv'
+                else 'null' end as end_node,
+                count(distinct i.user_id) as uniques,
+                sum(converter) as count
+            from {"tmp."+self.uniqueID+"imps"} i
+            join {"tmp."+self.uniqueID+"exposed_nulls"} n
+            on i.user_id = n.user_id
+                and i.rownum = n.max_row
             group by 1, 2"""
 
         elif self.format == 'path':
@@ -628,7 +696,7 @@ class Query(ADH):
             group by 1, 2)
             select
                 path,
-                countif(converter = 1) as converters,
+                countif(converter > 0) as converters,
                 count(*) as uniques
             from paths
             group by 1"""
@@ -663,8 +731,11 @@ class Query(ADH):
         for i in range(len(events)):
             parameters[f'event_start{i}'] = {'type': {'type': 'TIMESTAMP'}}
             parameters[f'event_end{i}'] = {'type': {'type': 'TIMESTAMP'}}
-        parameters['campaign_id'] = {'type': {'type': 'INT64'}}
-        parameters['activity_ids'] = {'type': {'arrayType': {'type': 'INT64'}}}
+            parameters['activity_ids'] = {'type': {'arrayType': {'type': 'INT64'}}}
+        if self.campaign.advertiserId:
+            parameters['advertiser_Id'] = {'type': {'arrayType': {'type': 'INT64'}}} 
+        if self.campaign.id:
+            parameters['campaign_id'] = {'type': {'arrayType': {'type': 'INT64'}}}         
         if self.campaign.ids:
             parameters['search_campaign_id'] = {'type': {'arrayType': {'type': 'INT64'}}}     
         if self.campaign.country_code:
@@ -708,11 +779,20 @@ class Query(ADH):
         for i in range(num_events):
             values[f'event_start{i}'] = {'value': events[i]['start_timestamp']}
             values[f'event_end{i}'] = {'value': events[i]['end_timestamp']}
-        values['campaign_id'] = {'value': str(self.campaign.id)}
         values['activity_ids'] = {'arrayValue': {'values': []}}        
         for id in self.campaign.activityIds:
             values['activity_ids']['arrayValue']['values'].append(
                 {'value': str(id)})
+        if self.campaign.advertiserId:
+            values['advertiser_Id'] = {'arrayValue': {'values': []}}
+            for id in self.campaign.advertiserId:
+                values['advertiser_Id']['arrayValue']['values'].append(
+                    {'value': str(id)})
+        if self.campaign.id:
+            values['campaign_id'] = {'arrayValue': {'values': []}}
+            for id in self.campaign.id:
+                values['campaign_id']['arrayValue']['values'].append(
+                    {'value': str(id)})
         if self.campaign.ids:
             values['search_campaign_id'] = {'arrayValue': {'values': []}}
             for id in self.campaign.ids:
@@ -780,7 +860,6 @@ class Query(ADH):
             f'and "{end.strftime(time_string)}"')
             for start, end in event_times)
 
-#collects all user_id's and floodlight activity from bq activities table of specified campaign.
         act_stmt_list = []
         for id in self.floodlight_config_ids:
             table = f"`essence-dt-raw.{self.dcm_account_id}.activity_{self.campaign.advertiserId}`"
@@ -796,12 +875,6 @@ class Query(ADH):
             act_stmt_list.append(act_stmt)
         activities_stmts = "\nunion all\n".join(act_stmt_list)
 
-# generates a large impressions table for the campaign and groups the impressions by user_id, impression time, and orders by the time for the date and times specified.
-# generates a table of impression clicks for the campaign that contains user_id and time of click in an ordered table by time and user_id and evaluation dimension for the dates specified.
-# ****NOTE line 831? should it be "{self.eval_dimension}" instead of "placement_id" in the query???**** 02/07/2020,sp
-# unions clicks and impressions tables together checks the number of impressions the user has in new imps table
-# compares this table against those who actually converted in the activities table query above and has a floodlight id matching campaign.
-# exposed_nulls line 858
         window_stmts = f"""
             with imp as (SELECT
                 cast({self.eval_dimension} as string) as {self.eval_dimension},
@@ -830,7 +903,7 @@ class Query(ADH):
             group by 1,2,3),            
             imps as (select 
                  user_id, 
-                 cast({self.eval_dimension} as string) as {self.eval_dimension},
+                 placement_id, 
                  event_time, 
                  ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY event_time ASC) AS rownum 
                  from (select 
