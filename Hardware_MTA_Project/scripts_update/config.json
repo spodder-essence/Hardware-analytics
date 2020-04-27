@@ -2,7 +2,11 @@
     "auth": {
         "developer_key": "AIzaSyAnc0kt2Gsi7IgceRqOX5w6cGi_XGKL_uw",
         "service_key_path": "",
+<<<<<<< HEAD
         "client_secret_path": "C:/Users/maximilian.schmitt/Documents/Analytics Hardware/MTA/V2/ClientSecretDevKey/essence_analytics_dev_notebooks.json"
+=======
+        "client_secret_path": "../Hardware-analytics/Hardware_MTA_Project/scripts_update/essence_analytics_dev_notebooks.json"
+>>>>>>> d64d823c9678677c05179ce023ce73de80197006
     },
     "campaign": {
         "id": [23558368,23540338],

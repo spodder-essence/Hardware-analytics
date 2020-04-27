@@ -1,6 +1,13 @@
 """
+<<<<<<< HEAD
 Author: Drew Lustig, Yvette Wang, Maximilian Schmitt
 Please feel free to contact me for questions about this module (maximilian.schmitt@)
+=======
+Author: Yvette & Max
+Please feel free to contact me for questions about this module
+
+#BQ comments added in 02/07/20; lines 751+, stick to ADH
+>>>>>>> d64d823c9678677c05179ce023ce73de80197006
 """
 
 import os
